@@ -87,7 +87,16 @@ pub fn BrainFuck() type {
                     Token.output => {
                         //std.debug.print("Executing token {any} @ {}\n ", .{ self.tokens[tokenIdx], tokenIdx });
                         // Output the byte at the data pointer.
-                        std.debug.print("{c}", .{@as(u8, @truncate(self.cells[cellIdx]))});
+                        if (self.cells[cellIdx] <= 255) {
+                            const c: u8 = @truncate(self.cells[cellIdx]);
+                            if (std.ascii.isPrint(c)) {
+                                std.debug.print("{c}", .{c});
+                            } else {
+                                std.debug.print("<non printable u8 {}>", .{c});
+                            }
+                        } else {
+                            std.debug.print("{}", .{self.cells[cellIdx]});
+                        }
                     },
                     Token.input => {
                         //std.debug.print("Executing token {any} @ {}\n ", .{ self.tokens[tokenIdx], tokenIdx });
