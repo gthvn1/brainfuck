@@ -121,12 +121,11 @@ pub fn BrainFuck() type {
                                     return BrainFuckError.JumpsError;
 
                                 if (self.tokens[tokenIdx] == Token.closeBracket) {
-                                    if (self.nestedJumps == 0) {
+                                    if (self.nestedJumps == 0)
                                         break;
-                                    } else {
-                                        self.nestedJumps -= 1;
-                                        continue;
-                                    }
+
+                                    self.nestedJumps -= 1;
+                                    continue;
                                 }
 
                                 if (self.tokens[tokenIdx] == Token.openBracket)
@@ -150,12 +149,11 @@ pub fn BrainFuck() type {
                                     return BrainFuckError.TokensUnderflow;
 
                                 if (self.tokens[tokenIdx] == Token.openBracket) {
-                                    if (self.nestedJumps == 0) {
+                                    if (self.nestedJumps == 0)
                                         break;
-                                    } else {
-                                        self.nestedJumps -= 1;
-                                        continue;
-                                    }
+
+                                    self.nestedJumps -= 1;
+                                    continue;
                                 }
 
                                 if (self.tokens[tokenIdx] == Token.closeBracket)
