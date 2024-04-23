@@ -7,7 +7,7 @@
     - `cargo run --bin rot13`
     - Enter your text, then *enter* and *Ctrl-D*
 
-```rust
+```bash
 ❯ cargo run --bin rot13
     Finished dev [unoptimized + debuginfo] target(s) in 0.00s
      Running `target/debug/rot13`
