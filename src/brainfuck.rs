@@ -90,16 +90,18 @@ mod tests {
 
     #[test]
     pub fn github_profile() {
-        let name = "+++++ +++ [ >+++++ + 
-        [ >+>++>++<<<- ] >>+>++>+ [ < ] <- ]
-        >>>-.>++++.<+.>++.--------.";
-        let mut prog = Interpreter::new(name);
+        let mut prog = Interpreter::new(
+            "+++++ +++ [ >+++++ +
+            [ >+>++>++<<<- ] >>+>++>+ [ < ] <- ]
+            >>>-.>++++.<+.>++.--------.",
+        );
         prog.run().unwrap();
     }
 
     #[test]
     pub fn hello_test() {
-        let code = "
+        let mut prog = Interpreter::new(
+            " source: wikipedia/Brainfuck
 ++++++++                Set Cell #0 to 8
 [
     >++++               Add 4 to Cell #1; this will always set Cell #1 to 4
@@ -133,8 +135,8 @@ Pointer :   ^
 +++.------.--------.    Cell #3 for 'rl' and 'd'
 >>+.                    Add 1 to Cell #5 gives us an exclamation point
 >++.                    And finally a newline from Cell #6
-            ";
-        let mut prog = Interpreter::new(code);
+            ",
+        );
         prog.run().unwrap();
         assert_eq!(1, 1);
     }
