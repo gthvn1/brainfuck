@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 #[derive(Debug)]
 enum Token {
     Incptr,
@@ -11,17 +13,18 @@ enum Token {
 }
 
 pub struct Interpreter {
-    ip: usize,      // Instruction Pointer
-    dp: usize,      // Data Pointer
-    cells: Vec<u8>, // Vector of bytes
-    insns: Vec<Token>,
+    ip: usize,                    // Instruction Pointer
+    dp: usize,                    // Data Pointer
+    cells: Vec<u8>,               // Vector of bytes
+    insns: Vec<Token>,            // instrutions are list of Tokens
+    jumps: HashMap<usize, usize>, // Keep track of jumps (forward and backwards)
 }
 
 // Our function doesn't return anything, it has just side effect
 type Result<T> = std::result::Result<T, ()>;
 
 impl Interpreter {
-    pub fn new(code: &str) -> Self {
+    pub fn new(code: &str) -> Result<Self> {
         let mut toks: Vec<Token> = Vec::new();
 
         code.chars().for_each(|c| match c {
@@ -36,17 +39,62 @@ impl Interpreter {
             _ => {}
         });
 
-        Self {
+        // Let's keep track of jumps in a second pass.
+        let mut jumps_loc: Vec<usize> = Vec::new(); // keep track of open brackets position
+        let mut jumps = HashMap::new();
+        for (i, c) in toks.iter().enumerate() {
+            match c {
+                Token::Forward => {
+                    jumps_loc.push(i);
+                }
+                Token::Backward => {
+                    let forward_ip = match jumps_loc.pop() {
+                        None => {
+                            eprintln!("unbalanced brackets");
+                            return Err(());
+                        }
+                        Some(ip) => ip,
+                    };
+                    jumps.insert(i, forward_ip);
+                    jumps.insert(forward_ip, i);
+                }
+                _ => { // Nothing to do}
+                }
+            }
+        }
+
+        if !jumps_loc.is_empty() {
+            eprintln!("Missing closed brackets");
+            return Err(());
+        }
+
+        Ok(Self {
             ip: 0,
             dp: 0,
             insns: toks,
             cells: vec![0; 1024],
+            jumps,
+        })
+    }
+
+    fn interpreter_state(&self) {
+        println!("-----------------------------------");
+        println!("Next instruction: {:?}", self.insns[self.ip]);
+        println!("IP: {:?}", self.ip);
+        println!("DP: {:?}", self.dp);
+        // print non empty cell
+        for (id, c) in self.cells.iter().enumerate() {
+            if *c != 0 {
+                println!("cell[{:?}] = {:?}", id, *c);
+            }
         }
     }
 
-    pub fn run(&mut self) -> Result<()> {
+    pub fn run(&mut self, debug: bool) -> Result<()> {
         loop {
-            println!("PC at {:?}", self.insns[self.ip]);
+            if debug {
+                self.interpreter_state()
+            }
 
             // The program terminates when the instruction pointer
             // moves past the last command.
@@ -71,15 +119,38 @@ impl Interpreter {
                 }
                 Token::Incbyte => self.cells[self.dp] += 1,
                 Token::Decbyte => self.cells[self.dp] -= 1,
-                Token::Outbyte => todo!("outbyte"),
+                Token::Outbyte => {
+                    print!("{:?}", self.cells[self.dp] as char);
+                }
                 Token::Inbyte => todo!("Inbyte"),
-                Token::Forward => todo!("Forward"),
-                Token::Backward => todo!("Backward"),
+                Token::Forward => {
+                    if self.cells[self.dp] == 0 {
+                        match self.jumps.get(&self.ip) {
+                            Some(new_ip) => self.ip = *new_ip, // IP is incremented at the end
+                            None => {
+                                eprintln!("Failed to match bracket");
+                                return Err(());
+                            }
+                        }
+                    }
+                }
+                Token::Backward => {
+                    if self.cells[self.dp] != 0 {
+                        match self.jumps.get(&self.ip) {
+                            Some(new_ip) => self.ip = *new_ip, // IP is incremented at the end
+                            None => {
+                                eprintln!("Failed to match bracket");
+                                return Err(());
+                            }
+                        }
+                    }
+                }
             }
 
             self.ip += 1;
         }
 
+        println!();
         Ok(())
     }
 }
@@ -91,11 +162,12 @@ mod tests {
     #[test]
     pub fn github_profile() {
         let mut prog = Interpreter::new(
-            "+++++ +++ [ >+++++ +
-            [ >+>++>++<<<- ] >>+>++>+ [ < ] <- ]
-            >>>-.>++++.<+.>++.--------.",
-        );
-        prog.run().unwrap();
+            "
+            +++++ +++ [ >+++++ + [ >+>++>++<<<- ] >>+>++>+ [ < ] <- ] >>>-.>++++.<+.>++.--------.
+            ",
+        )
+        .unwrap();
+        prog.run(false).unwrap();
     }
 
     #[test]
@@ -136,7 +208,8 @@ Pointer :   ^
 >>+.                    Add 1 to Cell #5 gives us an exclamation point
 >++.                    And finally a newline from Cell #6
             ",
-        );
-        prog.run().unwrap();
+        )
+        .unwrap();
+        prog.run(false).unwrap();
     }
 }
