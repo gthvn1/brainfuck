@@ -89,6 +89,15 @@ mod tests {
     use crate::brainfuck::Interpreter;
 
     #[test]
+    pub fn github_profile() {
+        let name = "+++++ +++ [ >+++++ + 
+        [ >+>++>++<<<- ] >>+>++>+ [ < ] <- ]
+        >>>-.>++++.<+.>++.--------.";
+        let mut prog = Interpreter::new(name);
+        prog.run().unwrap();
+    }
+
+    #[test]
     pub fn hello_test() {
         let code = "
 ++++++++                Set Cell #0 to 8
