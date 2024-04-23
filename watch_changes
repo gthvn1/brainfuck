@@ -1,0 +1,26 @@
+#!/bin/bash
+
+clear
+echo "Monitoring src/ for changes..."
+echo -n "Hint: By default it runs tests."
+echo "Pass 'b' to build or 'r' to run the code"
+
+case $1 in
+b) CMD="cargo build" ;;
+r) CMD="cargo run" ;;
+*) CMD="cargo test -- --nocapture" ;;
+esac
+
+inotifywait -q -m -r -e modify src | while read -r _DIRECTORY EVENT _FILE; do
+	# echo $DIRECTORY $EVENT $FILE
+	case $EVENT in
+	MODIFY*)
+		clear
+		echo "= ${CMD} ==============================="
+		echo
+		${CMD}
+		echo
+		echo "= $(date) ==================="
+		;;
+	esac
+done
