@@ -20,43 +20,45 @@ pub struct Interpreter {
     jumps: HashMap<usize, usize>, // Keep track of jumps (forward and backwards)
 }
 
-// Our function doesn't return anything, it has just side effect
+// Our function just return Err(()) and print the error
 type Result<T> = std::result::Result<T, ()>;
 
 impl Interpreter {
     pub fn new(code: &str) -> Result<Self> {
-        let mut toks: Vec<Token> = Vec::new();
+        let mut insns: Vec<Token> = Vec::new();
 
         code.chars().for_each(|c| match c {
-            '>' => toks.push(Token::Incptr),
-            '<' => toks.push(Token::Decptr),
-            '+' => toks.push(Token::Incbyte),
-            '-' => toks.push(Token::Decbyte),
-            '.' => toks.push(Token::Outbyte),
-            ',' => toks.push(Token::Inbyte),
-            '[' => toks.push(Token::Forward),
-            ']' => toks.push(Token::Backward),
+            '>' => insns.push(Token::Incptr),
+            '<' => insns.push(Token::Decptr),
+            '+' => insns.push(Token::Incbyte),
+            '-' => insns.push(Token::Decbyte),
+            '.' => insns.push(Token::Outbyte),
+            ',' => insns.push(Token::Inbyte),
+            '[' => insns.push(Token::Forward),
+            ']' => insns.push(Token::Backward),
             _ => {}
         });
 
         // Let's keep track of jumps in a second pass.
         let mut jumps_loc: Vec<usize> = Vec::new(); // keep track of open brackets position
         let mut jumps = HashMap::new();
-        for (i, c) in toks.iter().enumerate() {
+        for (i, c) in insns.iter().enumerate() {
             match c {
                 Token::Forward => {
                     jumps_loc.push(i);
                 }
                 Token::Backward => {
-                    let forward_ip = match jumps_loc.pop() {
+                    match jumps_loc.pop() {
                         None => {
                             eprintln!("unbalanced brackets");
                             return Err(());
                         }
-                        Some(ip) => ip,
+                        Some(forward_ip) => {
+                            // We add both jumps
+                            jumps.insert(i, forward_ip);
+                            jumps.insert(forward_ip, i);
+                        }
                     };
-                    jumps.insert(i, forward_ip);
-                    jumps.insert(forward_ip, i);
                 }
                 _ => { // Nothing to do}
                 }
@@ -71,7 +73,7 @@ impl Interpreter {
         Ok(Self {
             ip: 0,
             dp: 0,
-            insns: toks,
+            insns,
             cells: vec![0; 1024],
             jumps,
         })
@@ -90,7 +92,9 @@ impl Interpreter {
         }
     }
 
-    pub fn run(&mut self, debug: bool) -> Result<()> {
+    pub fn run(&mut self, debug: bool) -> Result<String> {
+        let mut output = String::default();
+
         loop {
             if debug {
                 self.interpreter_state()
@@ -120,7 +124,7 @@ impl Interpreter {
                 Token::Incbyte => self.cells[self.dp] += 1,
                 Token::Decbyte => self.cells[self.dp] -= 1,
                 Token::Outbyte => {
-                    print!("{:?}", self.cells[self.dp] as char);
+                    output.push(self.cells[self.dp] as char);
                 }
                 Token::Inbyte => todo!("Inbyte"),
                 Token::Forward => {
@@ -151,7 +155,7 @@ impl Interpreter {
         }
 
         println!();
-        Ok(())
+        Ok(output)
     }
 }
 
@@ -167,7 +171,8 @@ mod tests {
             ",
         )
         .unwrap();
-        prog.run(false).unwrap();
+        let output = prog.run(false).unwrap_or("FAILED".to_string());
+        assert_eq!(output, "gthvn");
     }
 
     #[test]
@@ -210,6 +215,7 @@ Pointer :   ^
             ",
         )
         .unwrap();
-        prog.run(false).unwrap();
+        let output = prog.run(false).unwrap_or("FAILED".to_string());
+        assert_eq!(output, "Hello World!\n");
     }
 }
