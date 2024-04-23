@@ -123,9 +123,7 @@ impl Interpreter {
                 }
                 Token::Incbyte => self.cells[self.dp] += 1,
                 Token::Decbyte => self.cells[self.dp] -= 1,
-                Token::Outbyte => {
-                    output.push(self.cells[self.dp] as char);
-                }
+                Token::Outbyte => output.push(self.cells[self.dp] as char),
                 Token::Inbyte => todo!("Inbyte"),
                 Token::Forward => {
                     if self.cells[self.dp] == 0 {
