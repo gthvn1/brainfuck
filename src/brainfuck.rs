@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, io::Read};
 
 #[derive(Debug)]
 enum Token {
@@ -15,7 +15,7 @@ enum Token {
 pub struct Interpreter {
     ip: usize,                    // Instruction Pointer
     dp: usize,                    // Data Pointer
-    cells: Vec<u8>,               // Vector of bytes
+    cells: Vec<isize>,            // Vector of bytes
     insns: Vec<Token>,            // instrutions are list of Tokens
     jumps: HashMap<usize, usize>, // Keep track of jumps (forward and backwards)
 }
@@ -96,14 +96,16 @@ impl Interpreter {
         let mut output = String::default();
 
         loop {
-            if debug {
-                self.interpreter_state()
-            }
-
             // The program terminates when the instruction pointer
             // moves past the last command.
-            if self.ip >= self.insns.len() {
+            if self.ip > self.insns.len() - 1 {
                 break;
+            }
+
+            if debug {
+                // As interpreter_state is using self.ip run it after
+                // checking boundaries ^^^
+                self.interpreter_state()
             }
 
             match self.insns[self.ip] {
@@ -123,8 +125,26 @@ impl Interpreter {
                 }
                 Token::Incbyte => self.cells[self.dp] += 1,
                 Token::Decbyte => self.cells[self.dp] -= 1,
-                Token::Outbyte => output.push(self.cells[self.dp] as char),
-                Token::Inbyte => todo!("Inbyte"),
+                Token::Outbyte => {
+                    if let Some(c) = char::from_u32(self.cells[self.dp] as u32) {
+                        output.push(c);
+                    }
+                }
+                Token::Inbyte => {
+                    let mut buf: [u8; 1] = [0];
+                    match std::io::stdin().read(&mut buf) {
+                        Err(e) => {
+                            eprintln!("Failed to read byte from stdin: {}", e);
+                            return Err(());
+                        }
+                        Ok(n) => {
+                            if n > 0 {
+                                self.cells[self.dp] = buf[0] as isize
+                            }
+                            // otherwise we are done
+                        }
+                    }
+                }
                 Token::Forward => {
                     if self.cells[self.dp] == 0 {
                         match self.jumps.get(&self.ip) {
